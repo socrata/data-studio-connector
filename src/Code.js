@@ -1,3 +1,6 @@
+/**
+Configuration Block
+**/
 function getConfig(request) {
   var config = {
     configParams: [
@@ -238,3 +241,22 @@ function getData(request) {
     rows: data
   };
 };
+
+
+function test() {
+  var testDomain = "https://memfacts.data.socrata.com";
+  var testID = "fpn3-awpa";
+
+  var user_fields = [{"name":"incident_id","label":"Employee Status","dataType":"STRING"},{"name":"division","label":"Incident ID","dataType":"STRING"}];
+  var api_fields = ["incident_id", "division"];
+  var api_queries = [testDateCol, monthsAgo.format("YYYY-MM-DD"), upto.format("YYYY-MM-DD")];
+
+  var schema = schemaInit(testDomain, testID);
+  var tableSchema = toTableSchema(schema);
+  var dataDyn = dataDynamicInit(testDomain, testID, api_fields, api_queries);
+  var mapped = dataDyn.map(function(row) { return toRowResponse(tableSchema, row); });
+  var data = dataInit(testDomain, testID, api_fields);
+  var mapped = data.map(function(row) { return toRowResponse(tableSchema, row); });
+  Logger.log(mapped.length);
+
+}

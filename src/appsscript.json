@@ -1,0 +1,14 @@
+{
+  "timeZone": "America/Chicago",
+  "dependencies": {
+  },
+  "dataStudio": {
+    "name": "Socrata Private",
+    "logoUrl": "http://www.socrata.com/",
+    "company": "Peter Moore",
+    "companyUrl": "http://data.memphistn.gov/",
+    "addonUrl": "http://data.memphistn.gov/",
+    "supportUrl": "http://data.memphistn.gov/",
+    "description": "Connect Data Studio to Socrata Data"
+  }
+}
