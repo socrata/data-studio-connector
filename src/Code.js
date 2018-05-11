@@ -7,7 +7,7 @@ function getConfig(request) {
       {
         type: "INFO",
         name: "connect",
-        text: "PLEASE NOTE: This connector requires and domain and dataset ID to get started."
+        text: "PLEASE NOTE: This connector requires and domain and dataset ID (found at the end of the target dataset URL) to get started. Please refer to our support documentation on locating the identifier for assistance: https://goo.gl/7CZBtf"
       },
       {
         type: 'TEXTINPUT',
@@ -20,7 +20,7 @@ function getConfig(request) {
         type: 'TEXTINPUT',
         name: 'id',
         displayName: 'Dataset ID',
-        helpText: 'Copy and paste the dataset ID (e.g. 1234-abcd)',
+        helpText: 'Copy and paste the dataset ID (e.g. 1234-abcd) from the end of the target dataset URL',
         placeholder: '4jxs-y9s7'
       },
       {
@@ -31,14 +31,14 @@ function getConfig(request) {
       {
         type: 'TEXTINPUT',
         name: 'username',
-        displayName: 'Username: ',
+        displayName: '(optional) Username: ',
         helpText: 'Your Socrata Username',
         placeholder: ''
        },
        {
-         type: 'PASSWORD',
+         type: 'TEXTINPUT',
          name: 'password',
-         displayName: 'Password: ',
+         displayName: '(optional) Password: ',
          helpText: 'Your Socrata Password',
          placeholder: ''
        }
@@ -46,13 +46,18 @@ function getConfig(request) {
   };
   return config;
 };
+/**
+Authorization Block
+**/
 function getAuthType() {
   var response = {
     "type": "NONE"
   };
   return response;
 }
-// SCHEMA
+/**
+Dataset Field Mapping
+**/
 function toField(tableSchemaField) {
     switch (tableSchemaField.dataTypeName) {
         case 'boolean':
@@ -76,13 +81,18 @@ function toField(tableSchemaField) {
         'dataType': ftype
     }
 }
-
 function toTableSchema(schemaRow) {
     return schemaRow.map(toField);
 }
-
+/**
+Schema Initialization
+**/
 function schemaInit(domain, ID, USERNAME, PASSWORD) {
-  if(USERNAME || PASSWORD) {
+  id_regex = RegExp('[a-z0-9]{4}-[a-z0-9]{4}');
+  if(!id_regex.test(ID)) {
+    throw new Error("DS_USER:Invalid Dataset ID, must be in form abcd-1234");
+  }
+  if(USERNAME && PASSWORD) {
     var params = {
       method: 'get',
       headers: {
@@ -101,7 +111,6 @@ function schemaInit(domain, ID, USERNAME, PASSWORD) {
   var schema = JSON.parse(response);
   return schema;
 }
-
 function getSchema(request) {
     Logger.log("Getting Schema");
     var domain = request.configParams.domain;
@@ -112,44 +121,9 @@ function getSchema(request) {
     return {'schema': tableSchema};
 }
 
-// DATA
-function dataDynamicInit(domain, ID, api_fields, api_query, USERNAME, PASSWORD) {
-  if(USERNAME || PASSWORD) {
-    var params = {
-      method: 'get',
-      headers: {
-        Authorization: "Basic "+ Utilities.base64Encode(USERNAME + ':' + PASSWORD),
-        Accept: "application/json"
-      },
-      escaping: false
-    };
-  } else {
-    var params = { method: 'get', escaping: false }
-  }
-  // Fetch total number of rows
-  query = ["$select=count(*) as count&$where=",[api_query[0], ">='",api_query[1],"' and ",api_query[0]," <='", api_query[2], "'"].join("")].join("");
-  var c = [domain, "/resource/", ID, ".json?", query];
-
-  var url = encodeURI(c.join(""));
-  JSON.parse(UrlFetchApp.fetch(url, params))
-  var count = parseInt(JSON.parse(UrlFetchApp.fetch(url, params))[0]["count"]);
-
-  // Iterate through and collect data
-  data = [];
-  for(var i = 0; i < count; i += 50000) {
-    if(i === 0) {
-      c = [domain, "/resource/", ID, ".json?$limit=50000&$select=", api_fields.join(","),"&$where=", api_query[0],">='",api_query[1],"' and ",api_query[0]," <='", api_query[2], "'"];
-    } else {
-      c = [domain, "/resource/", ID, ".json?$limit=50000&$offset=", i.toString(), "&$select=", api_fields.join(","),"&$where=", api_query[0],">='",api_query[1],"' and ", api_query[0], "<='", api_query[2], "'"];
-    }
-    url = encodeURI(c.join(""));
-    var j = UrlFetchApp.fetch(url, params);
-    var d = JSON.parse(UrlFetchApp.fetch(url, params));
-    data.push.apply(data, d);
-  }
-  return data;
-}
-
+/**
+Data Initializations
+**/
 function dataInit(domain, ID, api_fields, USERNAME, PASSWORD) {
   if(USERNAME || PASSWORD) {
     var params = {
@@ -173,6 +147,7 @@ function dataInit(domain, ID, api_fields, USERNAME, PASSWORD) {
   var count = parseInt(JSON.parse(UrlFetchApp.fetch(url, params))[0]["count"]);
 
   // Iterate through and collect data
+  // at 50,000 rows per call
   data = [];
   for(var i = 0; i < count; i += 50000) {
     if(i === 0) {
@@ -187,8 +162,6 @@ function dataInit(domain, ID, api_fields, USERNAME, PASSWORD) {
   }
   return data;
 }
-
-
 
 function toRowResponse(fieldNames, row) {
     return {
@@ -231,8 +204,6 @@ function getData(request) {
     unmappedData = dataInit(domain, datasetID, api_fields, username, password);
   }
 
-
-
   var data = unmappedData.map(function(row) {
     return toRowResponse(dataSchema, row);
   });
@@ -241,22 +212,22 @@ function getData(request) {
     rows: data
   };
 };
-
-
+/**
+Test function
+**/
 function test() {
-  var testDomain = "https://memfacts.data.socrata.com";
-  var testID = "fpn3-awpa";
+  var testDomain = "https://metropolis.demo.socrata.com";
+  var testID = "h4ws-ns8a";
 
   var user_fields = [{"name":"incident_id","label":"Employee Status","dataType":"STRING"},{"name":"division","label":"Incident ID","dataType":"STRING"}];
   var api_fields = ["incident_id", "division"];
-  var api_queries = [testDateCol, monthsAgo.format("YYYY-MM-DD"), upto.format("YYYY-MM-DD")];
+  //var api_queries = [testDateCol, monthsAgo.format("YYYY-MM-DD"), upto.format("YYYY-MM-DD")];
 
   var schema = schemaInit(testDomain, testID);
-  var tableSchema = toTableSchema(schema);
-  var dataDyn = dataDynamicInit(testDomain, testID, api_fields, api_queries);
-  var mapped = dataDyn.map(function(row) { return toRowResponse(tableSchema, row); });
-  var data = dataInit(testDomain, testID, api_fields);
-  var mapped = data.map(function(row) { return toRowResponse(tableSchema, row); });
-  Logger.log(mapped.length);
-
+  //var tableSchema = toTableSchema(schema);
+  //var dataDyn = dataDynamicInit(testDomain, testID, api_fields, api_queries);
+  //var mapped = dataDyn.map(function(row) { return toRowResponse(tableSchema, row); });
+  //var data = dataInit(testDomain, testID, api_fields);
+  //var mapped = data.map(function(row) { return toRowResponse(tableSchema, row); });
+  //Logger.log(mapped.length);
 }
