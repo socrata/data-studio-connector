@@ -101,11 +101,6 @@ function toTableSchema(schemaRow) {
 Schema Initialization
 **/
 function schemaInit(domain, ID, USERNAME, PASSWORD) {
-  /** Test for improper dataset ID */
-  id_regex = RegExp('[a-z0-9]{4}-[a-z0-9]{4}');
-  if(!id_regex.test(ID)) {
-    throw new Error("DS_USER:Invalid Dataset ID, must be in form abcd-1234");
-  }
   if(USERNAME && PASSWORD) {
     var params = {
       method: 'get',
@@ -126,7 +121,6 @@ function schemaInit(domain, ID, USERNAME, PASSWORD) {
   return schema;
 }
 function getSchema(request) {
-    Logger.log("Getting Schema");
     var domain = request.configParams.domain || sampleDomain;
     var datasetID = request.configParams.id || sampleDataset;
     var username = request.configParams.username;
@@ -202,9 +196,11 @@ function getData(request) {
   var formatted_fields = [];
   var api_query = [];
   var unmappedData = [];
-
-  var cache = CacheService.getUserCache();
-  var cachedData = cache.get(connector.cacheKey);
+  /**
+  * TODO: Test to see if data is already cached
+  **/
+  //var cache = CacheService.getUserCache();
+  //var cachedData = cache.get(connector.cacheKey);
 
   for(var i = 0; i < tableSchema.length; i++) {
     request.fields.forEach(function(user) {
@@ -219,11 +215,6 @@ function getData(request) {
           }
         }
     });
-
-    /**
-    * TODO: Test to see if data is already cached
-    **/
-
     unmappedData = dataInit(domain, datasetID, api_fields, username, password);
   }
 
@@ -239,18 +230,17 @@ function getData(request) {
 Test function
 **/
 function test() {
-  var testDomain = "https://metropolis.demo.socrata.com";
-  var testID = "h4ws-ns8a";
-
-  var user_fields = [{"name":"incident_id","label":"Employee Status","dataType":"STRING"},{"name":"division","label":"Incident ID","dataType":"STRING"}];
-  var api_fields = ["incident_id", "division"];
+  var testDomain = sampleDomain;
+  var testID = sampleDataset;
+  var user_fields = [{"name":"name","label":"Name","dataType":"STRING"},{"name":"agency_name","label":"Agency Name","dataType":"STRING"}];
+  var api_fields = ["name", "agency_name"];
   //var api_queries = [testDateCol, monthsAgo.format("YYYY-MM-DD"), upto.format("YYYY-MM-DD")];
 
   var schema = schemaInit(testDomain, testID);
-  //var tableSchema = toTableSchema(schema);
+  var tableSchema = toTableSchema(schema);
   //var dataDyn = dataDynamicInit(testDomain, testID, api_fields, api_queries);
   //var mapped = dataDyn.map(function(row) { return toRowResponse(tableSchema, row); });
-  //var data = dataInit(testDomain, testID, api_fields);
-  //var mapped = data.map(function(row) { return toRowResponse(tableSchema, row); });
-  //Logger.log(mapped.length);
+  var data = dataInit(testDomain, testID, api_fields);
+  var mapped = data.map(function(row) { return toRowResponse(tableSchema, row); });
+  Logger.log(mapped.length);
 }
