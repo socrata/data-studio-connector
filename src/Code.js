@@ -1,4 +1,17 @@
 /**
+* Apps Script Cache expiration time (in seconds) for UrlFetch response.
+* @const
+*/
+var cacheExpiration = 60 * 60;
+
+/** @const */
+var cacheTag = 'ulrFetch-results';
+
+/** @const */
+
+var sampleDomain = 'https://opendata.socrata.com';
+var sampleDataset = 'n5m4-mism';
+/**
 Configuration Block
 **/
 function getConfig(request) {
@@ -7,21 +20,21 @@ function getConfig(request) {
       {
         type: "INFO",
         name: "connect",
-        text: "PLEASE NOTE: This connector requires and domain and dataset ID (found at the end of the target dataset URL) to get started. Please refer to our support documentation on locating the identifier for assistance: https://goo.gl/7CZBtf"
+        text: "PLEASE NOTE: This connector requires a domain and dataset ID (found at the end of the target dataset URL) to get started. Please refer to our support documentation on locating the identifier for assistance: https://goo.gl/7CZBtf"
       },
       {
         type: 'TEXTINPUT',
         name: 'domain',
         displayName: 'Domain',
         helpText: 'Copy and paste the Domain (e.g. https://opendata.socrata.com).',
-        placeholder: 'https://opendata.socrata.com'
+        placeholder: sampleDomain
       },
       {
         type: 'TEXTINPUT',
         name: 'id',
         displayName: 'Dataset ID',
         helpText: 'Copy and paste the dataset ID (e.g. 1234-abcd) from the end of the target dataset URL',
-        placeholder: '4jxs-y9s7'
+        placeholder: sampleDataset
       },
       {
         type: "INFO",
@@ -88,6 +101,7 @@ function toTableSchema(schemaRow) {
 Schema Initialization
 **/
 function schemaInit(domain, ID, USERNAME, PASSWORD) {
+  /** Test for improper dataset ID */
   id_regex = RegExp('[a-z0-9]{4}-[a-z0-9]{4}');
   if(!id_regex.test(ID)) {
     throw new Error("DS_USER:Invalid Dataset ID, must be in form abcd-1234");
@@ -113,8 +127,8 @@ function schemaInit(domain, ID, USERNAME, PASSWORD) {
 }
 function getSchema(request) {
     Logger.log("Getting Schema");
-    var domain = request.configParams.domain;
-    var datasetID = request.configParams.id;
+    var domain = request.configParams.domain || sampleDomain;
+    var datasetID = request.configParams.id || sampleDataset;
     var username = request.configParams.username;
     var password = request.configParams.password;
     var tableSchema = toTableSchema(schemaInit(domain, datasetID, username, password));
@@ -125,7 +139,7 @@ function getSchema(request) {
 Data Initializations
 **/
 function dataInit(domain, ID, api_fields, USERNAME, PASSWORD) {
-  if(USERNAME || PASSWORD) {
+  if(USERNAME && PASSWORD) {
     var params = {
       method: 'get',
       headers: {
@@ -176,8 +190,8 @@ function toRowResponse(fieldNames, row) {
 }
 
 function getData(request) {
-  var domain = request.configParams.domain;
-  var datasetID = request.configParams.id;
+  var domain = request.configParams.domain || sampleDomain;
+  var datasetID = request.configParams.id || sampleDataset;
   var username = request.configParams.username;
   var password = request.configParams.password;
 
@@ -188,6 +202,10 @@ function getData(request) {
   var formatted_fields = [];
   var api_query = [];
   var unmappedData = [];
+
+  var cache = CacheService.getUserCache();
+  var cachedData = cache.get(connector.cacheKey);
+
   for(var i = 0; i < tableSchema.length; i++) {
     request.fields.forEach(function(user) {
         if (user.name === tableSchema[i].name) {
@@ -201,6 +219,11 @@ function getData(request) {
           }
         }
     });
+
+    /**
+    * TODO: Test to see if data is already cached
+    **/
+
     unmappedData = dataInit(domain, datasetID, api_fields, username, password);
   }
 
