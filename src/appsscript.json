@@ -13,8 +13,8 @@
     "shortDescription":"Connect Data Studio to Socrata Data",
     "authType":["NONE"],
     "feeType":["FREE"],
-    "sources":["Socrata"],
-    "privacyPolicyUrl":"",
-    "termsOfServiceUrl":""
+    "sources":["SOCRATA"],
+    "privacyPolicyUrl":"https://socrata.com/privacy/",
+    "termsOfServiceUrl":"https://socrata.com/terms-of-service/"
   }
 }
