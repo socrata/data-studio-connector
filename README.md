@@ -3,6 +3,7 @@
 ## Usage
 
 ### Settings
+
 Domain : The domain of the target dataset, including the "https://"
 
 Dataset ID: The dataset ID is the unique identifier of all Socrata datasets and can be found at the end of the URL of the target datasets
@@ -16,4 +17,7 @@ Username : (optional) Your Socrata username
 
 Password : (optional) Your Socrata password
 
-## Notes
+## Privacy and Terms of Use
+
+Privacy Policy : https://socrata.com/privacy/
+Terms of Use : https://socrata.com/terms-of-service/
